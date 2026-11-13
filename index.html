@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ArriaOne — Unified Delivery Shell</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f4f4;--layer:#fff;--layer2:#f4f4f4;--hover:#e8e8e8;--border:#e0e0e0;--border2:#c6c6c6;
+  --text:#161616;--muted:#525252;--subtle:#8d8d8d;
+  --blue:#0f62fe;--blue-h:#0050e6;--blue-bg:#edf5ff;
+  --green:#198038;--green-bg:#defbe6;--red:#da1e28;--red-bg:#fff1f1;--yellow:#8e6a00;--yellow-bg:#fcf4d6;
+  --purple:#8a3ffc;--purple-bg:#f6f2ff;
+  --shell:#161616;--shell2:#262626;--shell3:#393939;--shell-text:#f4f4f4;--shell-muted:#a8a8a8;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.4}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:var(--blue);text-decoration:none;cursor:pointer}
+a:hover{text-decoration:underline}
+.mono{font-family:'JetBrains Mono',monospace;font-size:12.5px}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ---------- Header ---------- */
+header{position:fixed;inset:0 0 auto 0;height:48px;background:var(--shell);color:var(--shell-text);display:flex;align-items:center;z-index:40;border-bottom:1px solid #000}
+.hbtn{background:none;border:0;height:48px;min-width:48px;display:flex;align-items:center;justify-content:center;color:var(--shell-text);gap:8px;padding:0 14px}
+.hbtn:hover{background:var(--shell3)}
+.brand{display:flex;align-items:center;gap:8px;padding:0 14px 0 4px;font-weight:600;font-size:15px;white-space:nowrap}
+.brand small{font-weight:400;color:var(--shell-muted)}
+.ctx{border-left:1px solid var(--shell3);border-right:1px solid var(--shell3);text-align:left;padding:0 16px;min-width:230px;justify-content:space-between}
+.ctx .l1{font-size:13px;font-weight:500}
+.ctx .l2{font-size:11px;color:var(--shell-muted)}
+.search{white-space:nowrap;overflow:hidden;flex:1;max-width:520px;margin:0 16px;height:32px;background:var(--shell2);border:1px solid var(--shell3);border-radius:2px;color:var(--shell-muted);display:flex;align-items:center;gap:8px;padding:0 10px;text-align:left}
+.search:hover{border-color:#6f6f6f}
+.search kbd{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;border:1px solid var(--shell3);padding:1px 5px;border-radius:2px}
+.spacer{flex:1}
+.genie-btn{background:var(--purple);height:32px;margin:0 8px;border-radius:2px;padding:0 12px;font-weight:500;font-size:13px}
+.genie-btn:hover{background:#7631e8}
+.avatar{width:28px;height:28px;border-radius:50%;background:#e5e0df;color:#161616;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+.concept{font-size:10.5px;letter-spacing:.3px;text-transform:uppercase;border:1px solid #6f6f6f;color:var(--shell-muted);padding:2px 6px;border-radius:2px;margin-right:8px;white-space:nowrap}
+
+/* ---------- Side nav ---------- */
+nav{position:fixed;top:48px;bottom:0;left:0;width:232px;background:var(--layer);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:30;transition:width .15s}
+body.collapsed nav{width:48px}
+.navsec{padding:14px 16px 6px;font-size:11px;letter-spacing:.32px;color:var(--subtle);text-transform:uppercase;white-space:nowrap;overflow:hidden}
+body.collapsed .navsec{visibility:hidden;height:8px;padding:0}
+.navitem{display:flex;align-items:center;gap:12px;height:36px;padding:0 15px;border:0;background:none;width:100%;text-align:left;color:var(--muted);white-space:nowrap;overflow:hidden;position:relative;font-size:14px}
+.navitem:hover{background:var(--hover);color:var(--text)}
+.navitem.active{background:var(--blue-bg);color:var(--text);font-weight:500}
+.navitem.active::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue)}
+.navitem .dot{width:7px;height:7px;border-radius:50%;margin-left:auto}
+.navitem.disabled{opacity:.45;cursor:not-allowed}
+.navitem .tag{margin-left:auto;font-size:10.5px;color:var(--subtle)}
+body.collapsed .navitem .label,body.collapsed .navitem .dot,body.collapsed .navitem .tag{display:none}
+.navfoot{margin-top:auto;border-top:1px solid var(--border);padding:12px 16px;font-size:12px;color:var(--muted);overflow:hidden}
+body.collapsed .navfoot{display:none}
+
+/* ---------- Main ---------- */
+main{margin-left:232px;padding:72px 32px 48px;transition:margin .15s;min-height:100%}
+body.collapsed main{margin-left:48px}
+body.genie-open main{margin-right:380px}
+body.genie-open main .grid{grid-template-columns:1fr !important}
+.crumbs{font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.crumbs a{font-size:12px}
+.ph{display:flex;align-items:flex-end;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.ph h1{font-size:26px;font-weight:400;margin:0;display:flex;align-items:center;gap:10px}
+.ph .sub{color:var(--muted);margin-top:4px}
+.ph .actions{margin-left:auto;display:flex;gap:8px}
+.btn{height:36px;padding:0 16px;border:0;border-radius:2px;background:var(--blue);color:#fff;font-size:14px}
+.btn:hover{background:var(--blue-h)}
+.btn.ghost{background:transparent;color:var(--blue);border:1px solid var(--border2)}
+.btn.ghost:hover{background:var(--hover)}
+.btn.sm{height:30px;padding:0 12px;font-size:13px}
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;gap:2px}
+.tab{padding:10px 16px;border:0;background:none;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--text);border-bottom-color:var(--blue);font-weight:500}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.card{background:var(--layer);border:1px solid var(--border);padding:16px 18px}
+.card h3{margin:0 0 12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card h3 .r{margin-left:auto;font-weight:400;font-size:12px}
+.kpi .lbl{font-size:12px;color:var(--muted)}
+.kpi .val{font-size:28px;font-weight:400;margin:6px 0 2px}
+.kpi .delta{font-size:12px}
+.up{color:var(--green)}.down{color:var(--red)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:2px 8px;border-radius:12px;background:var(--layer2);color:var(--muted);white-space:nowrap}
+.chip .d{width:6px;height:6px;border-radius:50%}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap}
+.st::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--subtle)}
+.st.ok::before{background:var(--green)}.st.fail::before{background:var(--red)}.st.warn::before{background:#f1c21b}.st.run::before{background:var(--blue);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.3}}
+table{width:100%;border-collapse:collapse;background:var(--layer)}
+th{font-size:12px;font-weight:600;text-align:left;color:var(--text);background:#e0e0e0;padding:10px 12px;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr.click:hover td{background:#f4f4f4;cursor:pointer}
+tr.hl td{background:#fcf4d6}
+.tablewrap{border:1px solid var(--border);overflow-x:auto}
+.muted{color:var(--muted)}.small{font-size:12px}
+.prog{display:flex;gap:2px}
+.prog span{width:16px;height:6px;background:var(--border)}
+.prog span.done{background:var(--blue)}
+.prog span.cur{background:var(--blue);opacity:.45}
+.prog span.fail{background:var(--red)}
+.prog span.warn{background:#f1c21b}
+.idlink{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--blue);cursor:pointer}
+.idlink:hover{text-decoration:underline}
+.feed{display:flex;flex-direction:column}
+.feed .row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+.feed .row:last-child{border:0}
+.feed .when{margin-left:auto;font-size:12px;color:var(--subtle);white-space:nowrap}
+
+/* kanban */
+.kan{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:12px;overflow-x:auto}
+.col{background:#e8e8e8;padding:10px;min-height:300px}
+.col h4{margin:2px 4px 10px;font-size:13px;font-weight:600;display:flex}
+.col h4 span{margin-left:auto;color:var(--muted);font-weight:400}
+.kcard{background:var(--layer);padding:12px;margin-bottom:8px;border-left:3px solid var(--blue);cursor:pointer}
+.kcard:hover{box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.kcard .t{margin:4px 0 10px;font-size:13.5px}
+.kcard .m{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.kcard .m .avatar{width:22px;height:22px;font-size:9.5px;margin-left:auto}
+
+/* trace */
+.trace{position:relative;padding-left:8px}
+.tstep{display:grid;grid-template-columns:120px 28px 1fr auto;gap:12px;align-items:start;min-height:64px}
+.tstep .stage{font-size:12px;color:var(--muted);padding-top:4px;text-align:right}
+.tstep .node{width:28px;display:flex;flex-direction:column;align-items:center;height:100%}
+.tstep .node .c{width:16px;height:16px;border-radius:50%;border:2px solid var(--border2);background:var(--layer);margin-top:4px;flex:none}
+.tstep .node .ln{width:2px;flex:1;background:var(--border2);min-height:40px}
+.tstep:last-child .node .ln{display:none}
+.tstep.done .c{background:var(--blue);border-color:var(--blue)}
+.tstep.done .ln{background:var(--blue)}
+.tstep.cur .c{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-bg)}
+.tstep.fail .c{background:var(--red);border-color:var(--red)}
+.tstep.warn .c{background:#f1c21b;border-color:#f1c21b}
+.tstep.todo .body{opacity:.5}
+.tstep .body{padding:2px 0 18px}
+.tstep .body .ti{font-weight:500}
+.tstep .open{padding-top:2px}
+
+/* stream svg */
+.loopwrap{position:relative}
+.loopnode{cursor:pointer}
+.loopnode:hover circle{stroke-width:4}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+
+/* Arria drawer */
+#genie{position:fixed;top:48px;right:0;bottom:0;width:380px;background:var(--layer);border-left:1px solid var(--border);transform:translateX(100%);transition:transform .2s;z-index:35;display:flex;flex-direction:column}
+body.genie-open #genie{transform:none}
+#genie .gh{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border);font-weight:600}
+#genie .gh .ctxl{font-weight:400;font-size:12px;color:var(--muted)}
+#genie .gbody{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.msg{padding:10px 12px;border-radius:2px;font-size:13.5px;max-width:92%}
+.msg.g{background:var(--purple-bg);border-left:3px solid var(--purple)}
+.msg.u{background:var(--blue-bg);align-self:flex-end}
+.sugg{display:flex;flex-direction:column;gap:6px}
+.sugg button{text-align:left;border:1px solid var(--border2);background:var(--layer);padding:8px 10px;font-size:13px;border-radius:2px}
+.sugg button:hover{border-color:var(--purple);background:var(--purple-bg)}
+#genie form{display:flex;border-top:1px solid var(--border)}
+#genie input{flex:1;border:0;padding:14px 16px;font:inherit;outline:none;background:var(--layer2)}
+#genie form button{border:0;background:var(--purple);color:#fff;padding:0 16px}
+
+/* overlays */
+.overlay{position:fixed;inset:0;background:rgba(22,22,22,.5);z-index:60;display:none;align-items:flex-start;justify-content:center;padding-top:12vh}
+.overlay.open{display:flex}
+.palette{width:min(640px,92vw);background:var(--layer);box-shadow:0 8px 32px rgba(0,0,0,.35)}
+.palette input{width:100%;border:0;border-bottom:1px solid var(--border);padding:16px 18px;font:inherit;font-size:16px;outline:none}
+.palette .res{max-height:50vh;overflow:auto}
+.palette .pr{display:flex;align-items:center;gap:12px;padding:10px 18px;cursor:pointer}
+.palette .pr.sel,.palette .pr:hover{background:var(--hover)}
+.palette .pr .k{margin-left:auto;font-size:11.5px;color:var(--subtle)}
+.palette .grp{font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--subtle);padding:10px 18px 4px}
+.ctxmenu{position:fixed;top:48px;left:0;width:340px;background:var(--layer);box-shadow:0 6px 24px rgba(0,0,0,.3);z-index:61;display:none}
+.ctxmenu.open{display:block}
+.ctxmenu .opt{padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border)}
+.ctxmenu .opt:hover{background:var(--hover)}
+.ctxmenu .opt.sel{border-left:3px solid var(--blue);padding-left:13px}
+.ctxmenu .opt .s{font-size:12px;color:var(--muted)}
+.ctxmenu .hd{padding:12px 16px 6px;font-size:12px;color:var(--muted)}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--shell);color:#fff;padding:12px 18px;font-size:13.5px;z-index:80;transition:transform .25s;display:flex;gap:10px;align-items:center;max-width:90vw}
+#toast.show{transform:translateX(-50%)}
+#toast::before{content:"";width:8px;height:8px;border-radius:50%;background:#42be65}
+
+/* compare */
+.callout{background:var(--layer);border-left:3px solid var(--blue);padding:14px 18px;margin-bottom:20px}
+.callout b{font-weight:600}
+.term{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--yellow-bg);padding:1px 6px;border-radius:2px;white-space:nowrap;display:inline-block;margin:1px 0}
+.term.u{background:var(--blue-bg)}
+.vsflow{display:flex;gap:4px;overflow-x:auto}
+.vsflow .s{flex:1;min-width:92px;background:var(--layer2);padding:10px;border-top:3px solid var(--blue)}
+.vsflow .s .n{font-size:12px;color:var(--muted)}
+.vsflow .s .v{font-size:20px;margin:4px 0}
+.vsflow .s .w{font-size:11.5px;color:var(--muted)}
+.env{border-top:3px solid var(--green)}
+.env .ver{font-family:'JetBrains Mono',monospace;font-size:20px;margin:8px 0}
+.bars{display:flex;align-items:flex-end;gap:6px;height:110px;padding-top:8px}
+.bars div{flex:1;display:flex;flex-direction:column-reverse;gap:1px}
+.bars i{display:block;background:var(--green)}
+.bars i.f{background:var(--red)}
+.bars + .bl{display:flex;gap:6px;font-size:10.5px;color:var(--subtle);margin-top:4px}
+.bars + .bl span{flex:1;text-align:center}
+@media (max-width:1100px){.g4,.g5{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:1fr}.search{display:none}}
+@media (max-width:760px){
+  nav{width:48px}nav .label,nav .dot,nav .tag,.navsec,.navfoot{display:none!important}
+  main{margin-left:48px!important;padding:64px 16px 40px}
+  .g2{grid-template-columns:1fr}.ctx{min-width:0}.ctx .l2{display:none}.brand small,.concept{display:none}
+  body.genie-open main{margin-right:0}#genie{width:100%}
+  .tstep{grid-template-columns:70px 24px 1fr}.tstep .open{display:none}
+}
+/* ---------- Arria Pilot Orchestrator ---------- */
+.navitem .dot.runp{background:var(--purple);animation:pulse 1s infinite}
+.notice{display:flex;gap:12px;align-items:center;padding:12px 16px;border-left:3px solid var(--blue);background:var(--blue-bg);margin-bottom:16px;font-size:13.5px;flex-wrap:wrap}
+.notice b{font-weight:600}
+.notice.err{border-color:var(--red);background:var(--red-bg)}
+.notice.ok{border-color:var(--green);background:var(--green-bg)}
+.notice.ask{border-color:var(--purple);background:var(--purple-bg)}
+.notice.gray{border-color:#8d8d8d;background:#e8e8e8;font-size:12.5px;padding:8px 14px}
+.notice .act{margin-left:auto;display:flex;gap:8px}
+.stepper{display:flex;margin-bottom:20px;gap:4px}
+.stepper .s{flex:1;padding:8px 2px 0;border-top:3px solid var(--border);font-size:12.5px;color:var(--subtle)}
+.stepper .s .n{font-size:11px;display:block}
+.stepper .s.done{border-top-color:var(--blue);color:var(--muted)}
+.stepper .s.cur{border-top-color:var(--blue);color:var(--text);font-weight:600}
+.stepper .s.fail{border-top-color:var(--red);color:var(--red);font-weight:600}
+.stepper .s.fixed{border-top-color:var(--green)}
+.gi{width:26px;height:26px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;color:#fff;flex:none}
+.gi svg.i{width:16px;height:16px}
+.gcard{border-top:3px solid var(--acc)}
+.gcard .top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.gcard .nm{font-weight:600}
+.tagx{font-size:11.5px;padding:2px 8px;border-radius:12px;background:#e0e0e0;color:var(--muted);white-space:nowrap}
+.tagx.on{background:var(--purple-bg);color:var(--purple)}
+.tagx.red{background:var(--red-bg);color:var(--red)}
+.tagx.green{background:var(--green-bg);color:var(--green)}
+.tagx.yel{background:var(--yellow-bg);color:var(--yellow)}
+.goal{width:100%;min-height:72px;font:inherit;font-size:16px;padding:12px 14px;border:0;border-bottom:1px solid #8d8d8d;background:var(--layer2);resize:vertical;outline:none}
+.goal:focus{outline:2px solid var(--blue);outline-offset:-2px}
+.fields{display:flex;gap:16px;flex-wrap:wrap;margin:14px 0}
+.fields label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.fields .v{font-size:14px;color:var(--text);background:var(--layer2);padding:7px 10px;border-bottom:1px solid #8d8d8d;min-width:170px}
+.seg{display:inline-flex;border:1px solid var(--border2);border-radius:2px;overflow:hidden}
+.seg button{border:0;background:var(--layer);padding:6px 11px;font-size:12.5px;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--border2)}
+.seg button.on{background:var(--text);color:#fff}
+.psteps .row{display:grid;grid-template-columns:28px 190px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--layer)}
+.psteps .row .num{font-family:'JetBrains Mono',monospace;color:var(--subtle)}
+.psteps .row .gn{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500}
+.psteps .row .tt{font-weight:500}
+.psteps .row .dd{font-size:12.5px;color:var(--muted)}
+.reason ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted)}
+.runwrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px}
+.lanes{position:relative;overflow-x:auto;border:1px solid var(--border);background:var(--layer);scroll-behavior:smooth}
+.lanes-inner{position:relative;min-width:1700px}
+.lane{height:128px;border-bottom:1px solid var(--border);display:flex}
+.lane:last-child{border-bottom:0}
+.lane.orch{background:#f2f4f8;border-bottom:2px solid #c1c7cd}
+.lane .ll{width:176px;padding:0 14px;display:flex;gap:10px;align-items:center;font-weight:600;font-size:13px;border-right:1px solid var(--border);background:inherit;position:sticky;left:0;z-index:4}
+.lane:not(.orch) .ll{background:var(--layer)}
+.lane .ll .sub{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.lane .ll .stt{display:block;font-size:11px;font-weight:500;margin-top:3px}
+.lane.active .ll{box-shadow:inset 4px 0 0 var(--acc)}
+.lane.red .ll{box-shadow:inset 4px 0 0 var(--red)}
+.art{position:absolute;width:172px;padding:7px 10px;background:var(--layer);border:1px solid var(--border2);border-top:3px solid var(--acc);font-size:12px;transition:left .8s ease,top .8s ease,opacity .45s;box-shadow:0 2px 6px rgba(0,0,0,.1);z-index:3}
+.art .k{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.art .t{font-weight:600;margin:1px 0 2px}
+.art .c{color:var(--muted);font-size:11px;line-height:1.3}
+.art .fr{font-size:10px;color:var(--subtle);margin-top:3px}
+.art.fail{border-top-color:var(--red);background:var(--red-bg)}
+.log{background:var(--layer);border:1px solid var(--border);max-height:642px;overflow:auto}
+.log h4{margin:0;padding:12px 14px;font-size:13px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--layer)}
+.log .e{padding:10px 14px;border-bottom:1px solid var(--border);font-size:12.5px;display:flex;gap:10px;animation:fadein .4s}
+.log .e .ts{font-family:'JetBrains Mono',monospace;color:var(--subtle);font-size:11px;white-space:nowrap;padding-top:1px}
+.log .e.err{background:var(--red-bg)}
+.log .e.ok{background:var(--green-bg)}
+@keyframes fadein{from{opacity:0;transform:translateY(-4px)}}
+.chk{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;align-items:center}
+.chk:last-child{border:0}
+.chk .ok{color:var(--green);font-weight:600}
+.btn.danger{background:transparent;color:var(--red);border:1px solid var(--red)}
+.btn.danger:hover{background:var(--red-bg)}
+.loopclose{display:flex;gap:14px;align-items:center;border-left:3px solid #8a3ffc;background:var(--purple-bg);padding:16px 18px;margin-top:16px}
+@media (max-width:1100px){.runwrap{grid-template-columns:1fr}.psteps .row{grid-template-columns:24px 1fr;}.psteps .row>*:nth-child(n+3){grid-column:2}}
+</style>
+</head>
+<body>
+
+<header>
+  <button class="hbtn" id="menuBtn" title="Collapse navigation"><svg class="i" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <div class="brand">
+    <svg viewBox="0 0 40 20" width="34" height="18"><path d="M20 10c-3-4.5-6-7-10-7a7 7 0 0 0 0 14c4 0 7-2.5 10-7s6-7 10-7a7 7 0 0 1 0 14c-4 0-7-2.5-10-7z" fill="none" stroke="#78a9ff" stroke-width="3"/></svg>
+    ArriaOne
+  </div>
+  <button class="hbtn ctx" id="ctxBtn"><span><div class="l1" id="ctxL1">Payments Platform</div><div class="l2" id="ctxL2">Team: Checkout · All environments</div></span><svg class="i" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+  <button class="search" id="searchBtn"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Search work items, repos, builds, releases…<kbd>⌘K</kbd></button>
+  <div class="spacer"></div>
+  <span class="concept">Concept prototype</span>
+  <button class="hbtn genie-btn" id="genieBtn"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>Arria</button>
+  <button class="hbtn" title="Notifications" onclick="toast('3 notifications: build #215 failed, release 2026.11 awaiting approval, PAY-139 tests flaky')"><svg class="i" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/></svg></button>
+  <button class="hbtn"><span class="avatar">AH</span></button>
+</header>
+
+<nav id="nav"></nav>
+<main id="main"></main>
+
+<aside id="genie">
+  <div class="gh"><svg class="i" viewBox="0 0 24 24" style="color:var(--purple)"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>Arria <span class="ctxl" id="genieCtx"></span><button class="hbtn" style="margin-left:auto;height:32px;min-width:32px;color:var(--text)" onclick="toggleGenie(false)">✕</button></div>
+  <div class="gbody" id="genieBody"></div>
+  <form id="genieForm"><input id="genieInput" placeholder="Ask about anything in this stream…" autocomplete="off"><button>Send</button></form>
+</aside>
+
+<div class="overlay" id="palOverlay"><div class="palette"><input id="palInput" placeholder="Jump to a capability, work item, repo, build or release…" autocomplete="off"><div class="res" id="palRes"></div></div></div>
+<div class="ctxmenu" id="ctxMenu"></div>
+<div id="toast"></div>
+
+<script>
+/* ================= Data (fictional) ================= */
+const ICON={
+  home:'<path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  trace:'<circle cx="5" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 6h6a3 3 0 0 1 3 3v6a3 3 0 0 0 3 3M5 8v12"/>',
+  compare:'<path d="M4 5h7v14H4zM13 5h7v14h-7z"/>',
+  plan:'<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M9 4v16M15 4v16"/>',
+  architect:'<path d="M12 2l9 5v10l-9 5-9-5V7zM12 12l9-5M12 12v10M12 12L3 7"/>',
+  code:'<path d="M8 6l-6 6 6 6M16 6l6 6-6 6"/>',
+  control:'<circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="7" r="2"/><path d="M6 7v10M18 9c0 5-12 3-12 8"/>',
+  build:'<path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5M3 17l9 5 9-5"/>',
+  test:'<path d="M4 6h10M4 12h10M4 18h6M15 17l2.5 2.5L22 15"/>',
+  release:'<path d="M5 6l6 6-6 6M13 6l6 6-6 6"/>',
+  deploy:'<path d="M5 19c1-3 3-5 3-5l2 2s-2 2-5 3zM9 15l-2-2c2-6 7-10 13-10 0 6-4 11-10 13z"/><circle cx="15" cy="9" r="1.5"/>',
+  observe:'<path d="M3 20h18M6 16l4-5 3 3 5-7"/>',
+  genie:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
+  loopg:'<path d="M12 12c-2-3-4-4.5-6-4.5a4.5 4.5 0 0 0 0 9c2 0 4-1.5 6-4.5s4-4.5 6-4.5a4.5 4.5 0 0 1 0 9c-2 0-4-1.5-6-4.5z"/>',
+  nexus:'<circle cx="12" cy="5" r="2"/><path d="M12 7v14M5 13a7 7 0 0 0 14 0M9 10h6"/>'
+};
+const ic=(n,s='')=>`<svg class="i" viewBox="0 0 24 24" ${s}>${ICON[n]||''}</svg>`;
+
+const STAGES=[
+ {id:'plan',name:'Plan',color:'#0f62fe',desc:'Work items, boards and sprints',health:'ok'},
+ {id:'architect',name:'Architect',color:'#8a3ffc',desc:'System design and component graphs',health:'ok'},
+ {id:'code',name:'Code',color:'#1192e8',desc:'Browser IDE and dev containers',health:'ok'},
+ {id:'control',name:'Control',color:'#007d79',desc:'Git repositories and pull requests',health:'ok'},
+ {id:'build',name:'Build',color:'#ff832b',desc:'Builds and pipeline runs',health:'fail'},
+ {id:'test',name:'Test',color:'#24a148',desc:'Test suites and verdicts',health:'warn'},
+ {id:'release',name:'Release',color:'#d02670',desc:'Release plans and gates',health:'warn'},
+ {id:'deploy',name:'Deploy',color:'#6929c4',desc:'Environments and deployments',health:'ok'},
+ {id:'observe',name:'Observe',color:'#b28600',desc:'DORA metrics and value stream',health:'ok'}
+];
+const SI=Object.fromEntries(STAGES.map((s,i)=>[s.id,i]));
+
+let FEED=[
+ ['build','Build <b>#215</b> failed on checkout-backend','PAY-148','12 min'],
+ ['test','Checkout regression: 3 flaky tests quarantined','PAY-139','40 min'],
+ ['deploy','<b>v2.14.0</b> deployed to staging','PAY-142','2 h'],
+ ['release','Release <b>2026.11</b> awaiting change approval','PAY-158','3 h'],
+ ['control','PR <b>#321</b> opened: 3DS2 challenge flow','PAY-151','5 h'],
+ ['code','Dev container started: pay-155-rounding','PAY-155','6 h'],
+ ['plan','Sprint 42 planned: 11 items, 46 pts','','1 d']
+];
+const PEOPLE={AH:'ALi H.',PN:'Priya N.',TR:'Tom R.',LK:'Lena K.',OS:'Omar S.',JM:'Jo M.'};
+const ITEMS=[
+ {id:'PAY-142',title:'Apple Pay support in checkout',stage:7,health:'ok',owner:'PN',pts:5,pr:318,build:214,ver:'2.14.0'},
+ {id:'PAY-139',title:'Retry logic for soft card declines',stage:5,health:'warn',owner:'TR',pts:3,pr:312,build:211,ver:'2.13.4'},
+ {id:'PAY-151',title:'3-D Secure v2 challenge flow',stage:3,health:'ok',owner:'LK',pts:8,pr:321,build:0,ver:''},
+ {id:'PAY-148',title:'Refund webhook idempotency',stage:4,health:'fail',owner:'OS',pts:3,pr:319,build:215,ver:''},
+ {id:'PAY-155',title:'Currency rounding for zero-decimal currencies',stage:2,health:'ok',owner:'JM',pts:2,pr:0,build:0,ver:''},
+ {id:'PAY-160',title:'Saved cards UI refresh',stage:1,health:'ok',owner:'PN',pts:5,pr:0,build:0,ver:''},
+ {id:'PAY-163',title:'Configurable fraud score threshold',stage:0,health:'ok',owner:'AH',pts:3,pr:0,build:0,ver:''},
+ {id:'PAY-158',title:'PCI log redaction for card fields',stage:6,health:'warn',owner:'OS',pts:5,pr:315,build:213,ver:'2.14.0'},
+ {id:'PAY-161',title:'Checkout latency budget alerts',stage:0,health:'ok',owner:'TR',pts:2,pr:0,build:0,ver:''},
+ {id:'PAY-157',title:'Buy-now-pay-later sandbox integration',stage:2,health:'ok',owner:'LK',pts:8,pr:0,build:0,ver:''},
+ {id:'PAY-133',title:'Split payments for marketplace sellers',stage:8,health:'ok',owner:'JM',pts:8,pr:301,build:204,ver:'2.13.0'},
+ {id:'PAY-130',title:'Localised receipt emails',stage:8,health:'ok',owner:'PN',pts:3,pr:298,build:201,ver:'2.12.2'}
+];
+const byId=id=>ITEMS.find(x=>x.id===id);
+
+const STREAMS=[
+ {name:'Payments Platform',team:'Checkout',cycles:37},
+ {name:'Mobile Banking',team:'iOS & Android',cycles:22},
+ {name:'Core Ledger',team:'Platform',cycles:9}
+];
+let ctx=STREAMS[0];
+
+/* ================= Helpers ================= */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const go=h=>{location.hash=h};
+const stChip=id=>{const s=STAGES[SI[id]];return `<span class="chip"><span class="d" style="background:${s.color}"></span>${s.name}</span>`};
+const hl={ok:'ok',warn:'warn',fail:'fail',run:'run'};
+const stLbl={ok:'Healthy',warn:'Needs attention',fail:'Failing',run:'Running'};
+const idl=id=>`<span class="idlink" onclick="event.stopPropagation();go('#/trace/${id}')">${id}</span>`;
+const av=k=>`<span class="avatar" title="${PEOPLE[k]}">${k}</span>`;
+function prog(it){return `<div class="prog">${STAGES.map((s,i)=>{let c='';if(i<it.stage)c='done';else if(i===it.stage)c=it.health==='fail'?'fail':it.health==='warn'?'warn':'cur';return `<span class="${c}" title="${s.name}"></span>`}).join('')}</div>`}
+function crumbs(parts){return `<div class="crumbs"><a onclick="go('#/overview')">${esc(ctx.name)}</a><span>/</span><span>${esc(ctx.team)}</span>${parts.map(p=>`<span>›</span>${p}`).join('')}</div>`}
+function ph(stageId,title,sub,actions=''){
+  const s=stageId&&STAGES[SI[stageId]];
+  return crumbs([s?`<a onclick="go('#/${s.id}')">${s.name}</a>`:'',(s?title!==s.name:title!==ctx.name)?esc(title):''].filter(Boolean))+
+  `<div class="ph"><div><h1>${s?`<span style="color:${s.color}">${ic(s.id,'style="width:26px;height:26px"')}</span>`:''}${esc(title)}</h1><div class="sub">${sub}</div></div><div class="actions">${actions}</div></div>`;
+}
+function table(cols,rows,opts={}){return `<div class="tablewrap"><table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`}
+let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3200)}
+
+/* ================= Nav ================= */
+function renderNav(active){
+  const it=(id,label,icon,extra='')=>`<button class="navitem ${active===id?'active':''}" onclick="go('#/${id}')" title="${label}">${ic(icon)}<span class="label">${label}</span>${extra}</button>`;
+  $('#nav').innerHTML=
+   `<div class="navsec">Stream</div>`+
+   it('overview','Overview','home')+
+   it('pilot','Arria Pilot','genie',window.ORCH_RUNNING?'<span class="dot runp"></span>':'')+
+   it('trace','Trace a change','trace')+
+   `<div class="navsec">Capabilities</div>`+
+   STAGES.map(s=>it(s.id,s.name,s.id,window.ORCH_ACTIVE===s.id?'<span class="tag" style="color:var(--purple);font-weight:600">Arria working</span>':`<span class="dot" style="background:${s.health==='fail'?'var(--red)':s.health==='warn'?'#f1c21b':'transparent'}"></span>`)).join('')+
+   `<button class="navitem disabled" title="Nexus is not enabled for this stream">${ic('nexus')}<span class="label">Nexus</span><span class="tag">Not enabled</span></button>`+
+   `<div class="navsec">Concept</div>`+
+   it('today','Before vs ArriaOne','compare')+
+   `<div class="navfoot">One window · one context<br><b>${esc(ctx.name)}</b> applied to all 9 capabilities</div>`;
+}
+
+/* ================= Views ================= */
+const V={};
+
+V.overview=()=>{
+  const inflight=ITEMS.filter(i=>i.stage<8).sort((a,b)=>b.stage-a.stage);
+  return ph(null,ctx.name,`Stream overview · Team ${esc(ctx.team)} · everything below is one click from its capability, in this window`,
+   `<button class="btn ghost" onclick="go('#/today')">Why unify?</button><button class="btn ghost" onclick="go('#/plan')">+ New work item</button><button class="btn" style="background:var(--purple)" onclick="go('#/pilot/home')">Run a goal with Arria Pilot</button>`)+
+  `<div class="grid g5" style="margin-bottom:16px">
+    <div class="card kpi" style="border-top:3px solid var(--purple)"><div class="lbl">Full stream cycles this month</div><div class="val">${ctx.cycles}</div><div class="delta up">▲ 12% vs Sep · North Star</div></div>
+    <div class="card kpi"><div class="lbl">Lead time for changes</div><div class="val">3.8 d</div><div class="delta up">▼ 0.6 d vs Sep</div></div>
+    <div class="card kpi"><div class="lbl">Deployment frequency</div><div class="val">4.2 / wk</div><div class="delta up">▲ 0.8</div></div>
+    <div class="card kpi"><div class="lbl">Change failure rate</div><div class="val">6%</div><div class="delta down">▲ 1 pt</div></div>
+    <div class="card kpi"><div class="lbl">Time to restore</div><div class="val">2.1 h</div><div class="delta up">▼ 0.4 h</div></div>
+  </div>
+  <div class="grid" style="grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);margin-bottom:16px">
+    <div class="card"><h3>The stream right now<span class="r muted">Click a stage to open it here</span></h3>${streamSvg()}
+      <div class="legend" style="margin-top:8px"><span><span class="st ok"></span> Healthy</span><span><span class="st warn"></span> Needs attention</span><span><span class="st fail"></span> Failing</span></div></div>
+    <div class="card"><h3>Across the stream<span class="r"><a onclick="go('#/trace/PAY-142')">Trace PAY-142 →</a></span></h3><div class="feed">
+      ${FEED.slice(0,7).map(r=>`<div class="row">${stChip(r[0])}<div>${r[1]}${r[2]?' · '+idl(r[2]):''}</div><span class="when">${r[3]}</span></div>`).join('')}
+    </div></div>
+  </div>
+  <div class="card" style="padding:0"><h3 style="padding:16px 18px 0">Changes in flight<span class="r muted">Each row spans all nine capabilities</span></h3><div style="padding:12px 0 0">
+  ${table(['Work item','Title','Progress through the stream','Current stage','Status','Owner',''],inflight.map(i=>`<tr class="click" onclick="go('#/trace/${i.id}')"><td>${idl(i.id)}</td><td>${esc(i.title)}</td><td>${prog(i)}</td><td>${stChip(STAGES[i.stage].id)}</td><td><span class="st ${i.health}">${stLbl[i.health]}</span></td><td>${av(i.owner)}</td><td><a>Trace →</a></td></tr>`))}
+  </div></div>`;
+};
+
+function streamSvg(){
+  const W=560,H=230,cx=W/2,cy=H/2,a=250;
+  const pt=t=>{const d=1+Math.sin(t)**2;return [cx+a*Math.cos(t)/d,cy+a*0.95*Math.sin(t)*Math.cos(t)/d]};
+  let d='';for(let k=0;k<=200;k++){const [x,y]=pt(k/200*2*Math.PI);d+=(k?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)}
+  const ts=[Math.PI*0.62,Math.PI*0.86,Math.PI*1.0,Math.PI*1.14,Math.PI*1.38,Math.PI*1.72,Math.PI*1.95+0.02,Math.PI*0.08+0.0,Math.PI*0.3];
+  const order=[0,1,2,3,4,5,6,7,8];
+  const col={ok:'#24a148',warn:'#f1c21b',fail:'#da1e28'};
+  const nodes=order.map((si,k)=>{const s=STAGES[si];const [x,y]=pt(ts[k]);const below=y>cy;
+    return `<g class="loopnode" onclick="go('#/${s.id}')"><circle cx="${x}" cy="${y}" r="15" fill="#fff" stroke="${col[s.health]}" stroke-width="3"/><g transform="translate(${x-9},${y-9}) scale(.75)" style="color:${s.color}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[s.id]}</svg></g><text x="${x}" y="${below?y+32:y-23}" text-anchor="middle" font-size="12" fill="#161616" font-family="Inter, sans-serif">${s.name}</text></g>`}).join('');
+  return `<div class="loopwrap"><svg viewBox="0 0 ${W} ${H}" width="100%"><path d="${d}" fill="none" stroke="#d0e2ff" stroke-width="14" stroke-linecap="round"/>${nodes}</svg></div>`;
+}
+
+V.plan=()=>{
+  const cols=[['Backlog',i=>i.stage===0],['In progress',i=>i.stage>=1&&i.stage<=3],['In verification',i=>i.stage>=4&&i.stage<=6],['Shipped',i=>i.stage>=7]];
+  const bc={ok:'var(--blue)',warn:'#f1c21b',fail:'var(--red)'};
+  return ph('plan','Plan','Sprint 42 · 14 Oct – 27 Oct · each card shows where the change is in the rest of the stream',`<button class="btn ghost">Backlog</button><button class="btn" onclick="toast('New work item form opens here, inside the same window')">+ Work item</button>`)+
+  `<div class="tabs"><button class="tab active">Board</button><button class="tab">Backlog</button><button class="tab">Releases</button><button class="tab">Queries</button><button class="tab">Dashboards</button></div>
+  <div class="kan">${cols.map(([n,f])=>{const l=ITEMS.filter(f);return `<div class="col"><h4>${n}<span>${l.length}</span></h4>${l.map(i=>`<div class="kcard" style="border-left-color:${bc[i.health]}" onclick="go('#/trace/${i.id}')"><div class="mono muted">${i.id} · ${i.type||'Story'}</div><div class="t">${esc(i.title)}</div>${prog(i)}<div class="m" style="margin-top:10px">${stChip(STAGES[i.stage].id)}<span>${i.pts} pts</span>${av(i.owner)}</div></div>`).join('')}</div>`}).join('')}</div>`;
+};
+
+V.architect=()=>ph('architect','Architect','System design for '+esc(ctx.name)+' · components link to the work items and repos that change them',`<button class="btn">+ Component</button>`)+
+ `<div class="grid g2"><div class="card"><h3>Component view</h3>
+ <svg viewBox="0 0 460 230" width="100%" font-family="Inter, sans-serif" font-size="12">
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#8d8d8d"/></marker></defs>
+  ${[['checkout-web',20,20],['checkout-service',170,20],['payment-gateway',320,20],['fraud-scoring',170,150],['ledger-connector',320,150]].map(([n,x,y])=>`<g><rect x="${x}" y="${y}" width="120" height="50" fill="${n==='checkout-service'?'#f6f2ff':'#fff'}" stroke="${n==='checkout-service'?'#8a3ffc':'#c6c6c6'}" stroke-width="${n==='checkout-service'?2:1}"/><text x="${x+60}" y="${y+29}" text-anchor="middle">${n}</text></g>`).join('')}
+  <path d="M140 45H168M290 45H318M230 70V148M290 70L330 148" stroke="#8d8d8d" fill="none" marker-end="url(#ar)"/>
+ </svg><div class="small muted">checkout-service changed by ${idl('PAY-142')} and ${idl('PAY-151')}</div></div>
+ <div class="card" style="padding:0"><div style="padding:16px 18px 4px"><h3>Components</h3></div>${table(['Component','Repo','Open changes','Owner'],[
+  ['checkout-web','checkout-frontend','PAY-160','PN'],['checkout-service','checkout-backend','PAY-142, PAY-151','LK'],['payment-gateway','checkout-backend','PAY-139','TR'],['fraud-scoring','payments-risk','PAY-163','AH'],['ledger-connector','checkout-backend','PAY-148','OS']
+ ].map(r=>`<tr><td class="mono">${r[0]}</td><td><a onclick="go('#/control')">${r[1]}</a></td><td>${r[2].split(', ').map(idl).join(', ')}</td><td>${av(r[3])}</td></tr>`))}</div></div>`;
+
+V.code=()=>ph('code','Code','Browser IDE · dev containers start from a work item, so the branch, repo and context are already set',`<button class="btn" onclick="toast('Pick a work item → container opens with its branch checked out')">+ Dev container</button>`)+
+ `<div class="tabs"><button class="tab active">Running (2)</button><button class="tab">Stopped (3)</button></div><div class="grid g3">${[
+  ['pay-155-rounding','PAY-155','checkout-backend','run','2 vCPU · 4 GB','JM'],
+  ['pay-157-bnpl-sandbox','PAY-157','checkout-backend','run','4 vCPU · 8 GB','LK'],
+  ['pay-142-applepay','PAY-142','checkout-frontend','','2 vCPU · 4 GB','PN']
+ ].map(c=>`<div class="card"><h3>${ic('code')}<span class="mono" style="font-weight:500">${c[0]}</span></h3><div class="small muted" style="margin-bottom:10px">${idl(c[1])} · repo <a onclick="go('#/control')">${c[2]}</a> · ${c[4]}</div><div style="display:flex;align-items:center;gap:10px"><span class="st ${c[3]||''}">${c[3]?'Running':'Stopped'}</span>${av(c[5])}<button class="btn sm" style="margin-left:auto" onclick="toast('IDE opens in a tab of this shell, not a new window')">${c[3]?'Open IDE':'Start'}</button></div></div>`).join('')}</div>`;
+
+V.control=()=>ph('control','Control','Git repositories · pull requests are linked to work items automatically from the branch name',`<button class="btn">+ Repository</button>`)+
+ `<div class="tabs"><button class="tab active">Pull requests</button><button class="tab">Repositories</button><button class="tab">Activity</button></div>`+
+ table(['PR','Title','Work item','Repo','Checks','Author','Updated'],[
+  [321,'3DS2 challenge flow','PAY-151','checkout-backend','run','LK','5 h'],
+  [319,'Idempotency keys for refund webhook','PAY-148','checkout-backend','fail','OS','12 min'],
+  [318,'Apple Pay button and token handling','PAY-142','checkout-frontend','ok','PN','merged · 5 d'],
+  [315,'Redact PAN fields in structured logs','PAY-158','checkout-backend','ok','OS','merged · 6 d'],
+  [312,'Retry soft declines with backoff','PAY-139','checkout-backend','warn','TR','merged · 7 d']
+ ].map(r=>`<tr class="click" onclick="go('#/trace/${r[2]}')"><td class="mono">#${r[0]}</td><td>${r[1]}</td><td>${idl(r[2])}</td><td class="mono">${r[3]}</td><td><span class="st ${r[4]}">${r[4]==='ok'?'Passed':r[4]==='fail'?'Failed':r[4]==='run'?'Running':'Flaky'}</span></td><td>${av(r[5])}</td><td class="muted small">${r[6]}</td></tr>`));
+
+V.build=()=>{
+  const days=[[4,0],[6,1],[3,0],[7,0],[5,1],[2,0],[8,1]];
+  return ph('build','Build','Build activity · a failed build points straight at the work item and PR that caused it',`<button class="btn ghost">Templates</button><button class="btn">Run build</button>`)+
+ `<div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr);margin-bottom:16px"><div class="card" style="padding:0">${table(['Build','Project','Work item','Status','Duration','Tests','Started'],[
+  [216,'checkout-frontend','PAY-160','run','—','—','2 min'],
+  [215,'checkout-backend','PAY-148','fail','4m 51s','211/214','12 min'],
+  [214,'checkout-frontend','PAY-142','ok','6m 12s','412/412','5 d'],
+  [213,'checkout-backend','PAY-158','ok','5m 40s','214/214','6 d'],
+  [211,'checkout-backend','PAY-139','warn','7m 03s','209/214','7 d']
+ ].map(r=>`<tr class="click ${r[3]==='fail'?'hl':''}" onclick="go('#/trace/${r[2]}')"><td class="mono">#${r[0]}</td><td class="mono">${r[1]}</td><td>${idl(r[2])}</td><td><span class="st ${r[3]}">${r[3]==='ok'?'Passed':r[3]==='fail'?'Failed':r[3]==='run'?'Running':'Unstable'}</span></td><td>${r[4]}</td><td>${r[5]}</td><td class="muted small">${r[6]}</td></tr>`))}</div>
+ <div class="card"><h3>Builds per day</h3><div class="bars">${days.map(([o,f])=>`<div>${'<i style="height:12px"></i>'.repeat(o)}${'<i class="f" style="height:12px"></i>'.repeat(f)}</div>`).join('')}</div><div class="bl">${['8','9','10','11','12','13','14'].map(d=>`<span>${d} Oct</span>`).join('')}</div></div></div>`;
+};
+
+V.test=()=>ph('test','Test','Test verdicts for '+esc(ctx.name)+' · suites run against builds, results flow back to the work item',`<button class="btn">Run suite</button>`)+
+ `<div class="grid g4" style="margin-bottom:16px">${[['Total tests','1,284',''],['Passed','1,262','up'],['Failed','9','down'],['Inconclusive','13','']].map(k=>`<div class="card kpi"><div class="lbl">${k[0]}</div><div class="val ${k[2]}">${k[1]}</div></div>`).join('')}</div>`+
+ table(['Suite','Type','Last run on','Result','Flaky','Linked'],[
+  ['Checkout regression','UI · 412 tests','build #214','ok','0','PAY-142'],
+  ['Payments API contract','API · 214 tests','build #215','fail','0','PAY-148'],
+  ['Soft-decline scenarios','API · 38 tests','build #211','warn','3','PAY-139'],
+  ['Card vault performance','Performance','build #213','ok','0','PAY-158']
+ ].map(r=>`<tr class="click" onclick="go('#/trace/${r[5]}')"><td>${r[0]}</td><td class="muted">${r[1]}</td><td><a onclick="event.stopPropagation();go('#/build')">${r[2]}</a></td><td><span class="st ${r[3]}">${r[3]==='ok'?'Passed':r[3]==='fail'?'Failed':'Unstable'}</span></td><td>${r[4]}</td><td>${idl(r[5])}</td></tr>`));
+
+V.release=()=>ph('release','Release','Release plans · gates pull evidence from Test, Build and Control automatically',`<button class="btn">+ Release</button>`)+
+ `<div class="grid g2"><div class="card" style="border-top:3px solid #d02670"><h3>2026.11 · Checkout Q4<span class="r"><span class="st warn">Awaiting approval</span></span></h3>
+  <div class="small muted" style="margin-bottom:12px">Production window Thu 16 Oct, 19:00 · 3 work items · v2.14.0</div>
+  ${[['Security scan','ok','No critical findings (Control)'],['Regression suite','ok','412/412 passed (Test)'],['Performance budget','ok','p95 312 ms (Test)'],['Change approval','warn','Waiting on release manager']].map(g=>`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)"><span class="st ${g[1]}"></span><span>${g[0]}</span><span class="muted small" style="margin-left:auto">${g[2]}</span></div>`).join('')}
+  <div style="margin-top:12px">${['PAY-142','PAY-158','PAY-139'].map(idl).join(' · ')}</div>
+  <button class="btn sm" style="margin-top:14px" onclick="toast('Approval recorded. Deploy is scheduled for the production window.')">Approve release</button></div>
+  <div class="card"><h3>Upcoming</h3><div class="feed">${[['2026.11.1 · Hotfix window','23 Oct','Planned'],['2026.12 · Year-end freeze','4 Dec','Draft'],['2026.10.2 · 3DS fix','9 Oct','Complete']].map(r=>`<div class="row"><div><b>${r[0]}</b><div class="small muted">${r[2]}</div></div><span class="when">${r[1]}</span></div>`).join('')}</div></div></div>`;
+
+V.deploy=()=>ph('deploy','Deploy','Environments and deployments · every version links back to the release and its work items',`<button class="btn">Deploy</button>`)+
+ `<div class="grid g3" style="margin-bottom:16px">${[['Development','2.14.1-rc2','10 min ago','ok'],['Staging','2.14.0','2 h ago','ok'],['Production','2.13.4','7 Oct','ok']].map(e=>`<div class="card env"><div class="small muted">${e[0]}</div><div class="ver">v${e[1]}</div><div style="display:flex;gap:10px"><span class="st ${e[3]}">Healthy</span><span class="muted small" style="margin-left:auto">${e[2]}</span></div></div>`).join('')}</div>`+
+ table(['Version','Environment','Release','Work items','Result','By','When'],[
+  ['2.14.0','Staging','2026.11','PAY-142, PAY-158','ok','PN','2 h'],
+  ['2.14.1-rc2','Development','—','PAY-160','ok','pipeline','10 min'],
+  ['2.13.4','Production','2026.10.2','PAY-139','ok','TR','7 Oct']
+ ].map(r=>`<tr><td class="mono">v${r[0]}</td><td>${r[1]}</td><td><a onclick="go('#/release')">${r[2]}</a></td><td>${r[3].split(', ').map(idl).join(', ')}</td><td><span class="st ${r[4]}">Succeeded</span></td><td>${PEOPLE[r[5]]?av(r[5]):'<span class="muted small">'+r[5]+'</span>'}</td><td class="muted small">${r[6]}</td></tr>`));
+
+V.observe=()=>ph('observe','Observe','Value stream for '+esc(ctx.name)+' · computed from the same items you saw in every other capability',`<button class="btn ghost">Export</button>`)+
+ `<div class="card" style="margin-bottom:16px"><h3>Where time goes (median, last 30 days)<span class="r muted">Bottleneck highlighted</span></h3><div class="vsflow">${[['Plan','0.9 d',2],['Architect','0.3 d',1],['Code','1.1 d',2],['Control','0.6 d',1],['Build','0.1 d',1],['Test','0.4 d',1],['Release','1.4 d',3],['Deploy','0.2 d',1]].map(s=>`<div class="s" style="${s[0]==='Release'?'border-top-color:var(--red);background:var(--red-bg)':''}"><div class="n">${s[0]}</div><div class="v">${s[1]}</div><div class="w">WIP ${s[2]}</div></div>`).join('')}</div>
+ <div class="small muted" style="margin-top:10px">Release approval waits are the largest share of lead time. Arria Pilot can suggest automating the change-approval gate.</div></div>
+ <div class="grid g4">${[['Full stream cycles',ctx.cycles,'Items that crossed ≥2 phases this month'],['Lead time','3.8 d','Commit → production'],['Deploy frequency','4.2 / wk','Production'],['Change failure rate','6%','Last 30 days']].map(k=>`<div class="card kpi"><div class="lbl">${k[0]}</div><div class="val">${k[1]}</div><div class="small muted">${k[2]}</div></div>`).join('')}</div>`;
+
+V.trace=(id)=>{
+  const it=byId(id||'PAY-142');
+  if(!it) return ph(null,'Trace a change','Item not found');
+  const T={
+   plan:()=>[`Story ${it.id} created and prioritised`,`Sprint 42 · ${it.pts} pts · owner ${PEOPLE[it.owner]}`],
+   architect:()=>[`checkout-service component updated`,`Interface change reviewed against system design`],
+   code:()=>[`Dev container ${it.id.toLowerCase()} opened`,`Branch feature/${it.id.toLowerCase()} created from the work item`],
+   control:()=>[it.pr?`PR #${it.pr} merged into main`:`PR opened for review`,it.pr?`3 commits · 2 approvals · security scan clean`:`Awaiting reviewers`],
+   build:()=>[it.health==='fail'&&it.stage===4?`Build #${it.build} failed`:`Build #${it.build||'—'} passed`,it.health==='fail'&&it.stage===4?`3 contract tests failing in checkout-backend`:`backend + frontend · 6m 12s`],
+   test:()=>[it.health==='warn'&&it.stage===5?`Regression: 209/214 passed`:`Regression: all tests passed`,it.health==='warn'&&it.stage===5?`3 flaky tests quarantined, 2 under investigation`:`Checkout regression + API contract`],
+   release:()=>[`Added to release 2026.11 · Checkout Q4`,it.stage===6?`Change approval pending`:`All gates passed`],
+   deploy:()=>[`v${it.ver||'2.14.0'} deployed to staging`,it.stage===7?`Production window Thu 16 Oct`:`Promoted to production`],
+   observe:()=>[`Lead time 4.1 days`,`Counted as a full stream cycle`]
+  };
+  const dates=it.dates||['6 Oct','7 Oct','7 Oct','9 Oct','9 Oct','9 Oct','10 Oct','10 Oct','13 Oct'];
+  const steps=STAGES.map((s,i)=>{
+    let cls='todo';if(i<it.stage)cls='done';else if(i===it.stage)cls=it.health==='fail'?'fail':it.health==='warn'?'warn':'cur';
+    const [t,m]=i<=it.stage?((it.trace&&it.trace[s.id])||T[s.id]()):[`Not started`,`Will appear here automatically`];
+    return `<div class="tstep ${cls}"><div class="stage">${s.name}${i<=it.stage?`<div class="small" style="color:var(--subtle)">${dates[i]}</div>`:''}</div><div class="node"><div class="c"></div><div class="ln"></div></div><div class="body"><div class="ti">${t}</div><div class="small muted">${m}</div></div><div class="open">${i<=it.stage?`<a class="small" onclick="go('#/${s.id}')">Open in ${s.name} →</a>`:''}</div></div>`;
+  }).join('');
+  return crumbs([`<a onclick="go('#/plan')">Plan</a>`,it.id])+
+  `<div class="ph"><div><h1><span class="mono" style="font-size:22px;color:var(--muted)">${it.id}</span>${esc(it.title)}</h1><div class="sub">One change, followed through all nine capabilities without leaving this window</div></div>
+  <div class="actions"><select class="btn ghost" style="padding:0 10px" onchange="go('#/trace/'+this.value)">${ITEMS.map(x=>`<option ${x.id===it.id?'selected':''} value="${x.id}">${x.id}</option>`).join('')}</select><button class="btn" onclick="toggleGenie(true,'Summarise ${it.id}')">Ask Arria</button></div></div>
+  <div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr)"><div class="card"><div class="trace">${steps}</div></div>
+  <div class="grid" style="align-content:start"><div class="card"><h3>Status</h3><span class="st ${it.health}">${stLbl[it.health]}</span><div style="margin:12px 0">${prog(it)}</div><div class="small muted">Currently in ${STAGES[it.stage].name} · owner ${PEOPLE[it.owner]}</div></div>
+  <div class="card"><h3>Linked across the stream</h3><div class="small" style="display:flex;flex-direction:column;gap:6px">
+   <span>Plan: <span class="mono">${it.id}</span></span>${it.pr?`<span>Control: <a onclick="go('#/control')">PR #${it.pr}</a></span>`:''}${it.build?`<span>Build: <a onclick="go('#/build')">#${it.build}</a></span>`:''}${it.stage>=6?`<span>Release: <a onclick="go('#/release')">${it.release||'2026.11'}</a></span>`:''}${it.stage>=7?`<span>Deploy: <a onclick="go('#/deploy')">v${it.ver}</a></span>`:''}
+  </div></div></div></div>`;
+};
+
+V.today=()=>ph(null,'Before vs ArriaOne','What the market looks like today, and what ArriaOne changes')+
+ `<div class="callout"><b>Nine capabilities, eight different words for "where am I".</b> Each capability opens in its own tool, starts from its own landing page, and asks you to pick your context again. ArriaOne keeps one context, <span class="term u">Stream → Team</span>, and maps it to each capability behind the scenes.</div>`+
+ table(['Capability','Context the user selects today','What the user lands on today','In ArriaOne'],[
+  ['Dashboard','<span class="term">Project</span>','Widgets with no data','Stream overview with live cross-capability data'],
+  ['Plan','<span class="term">Org</span> → <span class="term">Workspace</span> → <span class="term">Project</span>','"My Projects" picker before any work','Sprint board for the current stream'],
+  ['Architect','<span class="term">Workspace</span> → <span class="term">Repo</span>','Empty state: create a diagram','Components linked to work items'],
+  ['Code','<span class="term">Workspace</span>','No running dev containers','Containers started from a work item'],
+  ['Control','<span class="term">Organization</span> → <span class="term">Repository</span>','Personal commit activity','PRs linked to work items'],
+  ['Build','<span class="term">Project</span> → <span class="term">Pipeline</span>','Pipeline list, no build data','Builds linked to PRs and items'],
+  ['Test','<span class="term">Project</span> → <span class="term">Suite</span>','Empty suite list','Verdicts linked to builds'],
+  ['Release','Not captured','Not captured','Gates fed by Test, Build and Control'],
+  ['Deploy','<span class="term">Service</span> → <span class="term">Environment</span>','Deployment health dashboard','Versions linked to releases'],
+  ['Observe','<span class="term">Team</span> → <span class="term">Value stream</span>','"No releases found"','Value stream from the same items']
+ ].map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td class="muted">${r[2]}</td><td>${r[3]}</td></tr>`))+
+ `<div class="grid g3" style="margin-top:16px">
+  <div class="card"><h3>1 · One window</h3><div class="muted">Persistent shell: header, navigation and Arria stay put. Capabilities render inside it.</div></div>
+  <div class="card"><h3>2 · One context</h3><div class="muted">Switch the stream once in the header; every capability follows. Try it now.</div></div>
+  <div class="card"><h3>3 · One thread</h3><div class="muted">Any ID is clickable everywhere and opens its trace across all nine stages. <a onclick="go('#/trace/PAY-148')">See a failing one →</a></div></div></div>`;
+
+/* ================= Arria ================= */
+const GENIE={
+ overview:['Build #215 is failing and blocks PAY-148. Release 2026.11 is waiting on approval. Everything else is on track.',['What is blocking release 2026.11?','Why is change failure rate up?','Trace PAY-148']],
+ plan:['3 items in this sprint have no linked repo yet. PAY-163 and PAY-161 are unestimated.',['Draft acceptance criteria for PAY-163','Which items are at risk this sprint?']],
+ architect:['checkout-service is touched by 2 open changes. Consider a short design review before PAY-151 merges.',['Show dependencies of checkout-service','Generate a sequence diagram for 3DS2']],
+ code:['PAY-155 container has been idle for 3 hours. I can stop it to free capacity.',['Explain the rounding change in PAY-155','Generate unit tests for zero-decimal currencies']],
+ control:['PR #319 fails 3 contract tests. The cause is a changed response field in the refund webhook.',['Summarise PR #321 for review','Suggest a fix for PR #319']],
+ build:['Build #215 failed: refund webhook contract tests. Linked work item PAY-148, PR #319.',['Open the failing tests','Trace PAY-148','Rerun with debug logging']],
+ test:['3 tests in Soft-decline scenarios are flaky (5 of the last 10 runs). Quarantined automatically.',['Which tests are flaky this week?','Generate tests for PAY-163']],
+ release:['2026.11 has passed all automated gates. Only change approval is outstanding.',['Write release notes for 2026.11','Who needs to approve?']],
+ deploy:['Staging is healthy on v2.14.0. Production window is Thursday 19:00.',['Compare staging and production','Plan a rollback for 2026.11']],
+ observe:['Release approval waits are 37% of lead time. Automating low-risk approvals could cut about 1 day.',['Which changes qualified for auto-approval?','Show cycles by team']],
+ trace:['This view joins records from Plan, Control, Build, Test, Release and Deploy into one thread.',['What happens next for this item?','Who should I ping?']],
+ today:['ArriaOne keeps capability back ends as they are and unifies context, navigation and linking.',['What would phase 1 include?']]
+};
+let curView='overview';
+function renderGenie(){
+  const g=GENIE[curView]||GENIE.overview;const s=STAGES[SI[curView]];
+  $('#genieCtx').textContent='· '+(s?s.name:curView==='trace'?'Trace':curView==='pilot'?'Arria Pilot':'Overview')+' · '+ctx.name;
+  $('#genieBody').innerHTML=`<div class="msg g">${g[0]}</div><div class="sugg">${g[1].map(q=>`<button onclick="askGenie('${q.replace(/'/g,"\\'")}')">${q}</button>`).join('')}<button style="border-color:var(--purple);color:var(--purple)" onclick="toggleGenie(false);go('#/pilot/home')">Hand a goal to Arria Pilot →</button></div>`;
+}
+function askGenie(q){
+  const b=$('#genieBody');b.insertAdjacentHTML('beforeend',`<div class="msg u">${esc(q)}</div>`);
+  const m=q.match(/PAY-\d+/);
+  setTimeout(()=>{b.insertAdjacentHTML('beforeend',`<div class="msg g">${m?`Here is ${m[0]} across the stream. <a onclick="go('#/trace/${m[0]}')">Open trace →</a>`:'In the real product I would query Plan, Control, Build, Test, Release and Deploy together and answer here. In this prototype, responses are scripted.'}</div>`);b.scrollTop=b.scrollHeight},450);
+  b.scrollTop=b.scrollHeight;
+}
+function toggleGenie(open,q){document.body.classList.toggle('genie-open',open===undefined?!document.body.classList.contains('genie-open'):open);if(q)askGenie(q)}
+$('#genieBtn').onclick=()=>toggleGenie();
+$('#genieForm').onsubmit=e=>{e.preventDefault();const v=$('#genieInput').value.trim();if(v){askGenie(v);$('#genieInput').value=''}};
+
+/* ================= Context switcher ================= */
+function renderCtxMenu(){
+  $('#ctxMenu').innerHTML=`<div class="hd">Switch stream: applies to all capabilities</div>`+STREAMS.map((l,i)=>`<div class="opt ${l===ctx?'sel':''}" onclick="setCtx(${i})"><div>${l.name}</div><div class="s">Team: ${l.team}</div></div>`).join('');
+}
+function setCtx(i){ctx=STREAMS[i];$('#ctxL1').textContent=ctx.name;$('#ctxL2').textContent='Team: '+ctx.team+' · All environments';$('#ctxMenu').classList.remove('open');route();toast(`Context switched to ${ctx.name}. All 9 capabilities now follow it.`)}
+$('#ctxBtn').onclick=e=>{e.stopPropagation();renderCtxMenu();const r=$('#ctxBtn').getBoundingClientRect();$('#ctxMenu').style.left=r.left+'px';$('#ctxMenu').classList.toggle('open')};
+document.addEventListener('click',e=>{if(!e.target.closest('#ctxMenu'))$('#ctxMenu').classList.remove('open')});
+
+/* ================= Command palette ================= */
+const PAL=[
+ ...STAGES.map(s=>({g:'Capabilities',t:s.name,s:s.desc,h:'#/'+s.id,icon:s.id})),
+ {g:'Capabilities',t:'Overview',s:'Stream health and changes in flight',h:'#/overview',icon:'home'},
+ ...ITEMS.map(i=>({g:'Work items',t:i.id+'  '+i.title,s:'In '+STAGES[i.stage].name,h:'#/trace/'+i.id,icon:'plan'})),
+ ...['checkout-frontend','checkout-backend','payments-risk','payments-infra'].map(r=>({g:'Repositories',t:r,s:'Control',h:'#/control',icon:'control'})),
+ ...[216,215,214,213].map(b=>({g:'Builds',t:'Build #'+b,s:'Build',h:'#/build',icon:'build'})),
+ {g:'Releases',t:'2026.11 · Checkout Q4',s:'Release',h:'#/release',icon:'release'}
+];
+let palSel=0,palList=[];
+function renderPal(){
+  const q=$('#palInput').value.toLowerCase().trim();
+  palList=PAL.filter(p=>!q||(p.t+' '+p.s).toLowerCase().includes(q)).slice(0,14);
+  palSel=Math.min(palSel,Math.max(0,palList.length-1));
+  let last='';$('#palRes').innerHTML=palList.map((p,i)=>{const h=p.g!==last?`<div class="grp">${p.g}</div>`:'';last=p.g;return h+`<div class="pr ${i===palSel?'sel':''}" onclick="palGo(${i})">${ic(p.icon)}<span>${esc(p.t)}</span><span class="k">${p.s}</span></div>`}).join('')||'<div class="pr muted">No matches</div>';
+}
+function palGo(i){const p=palList[i];if(p){go(p.h);closePal()}}
+function openPal(){$('#palOverlay').classList.add('open');$('#palInput').value='';palSel=0;renderPal();setTimeout(()=>$('#palInput').focus(),10)}
+function closePal(){$('#palOverlay').classList.remove('open')}
+$('#searchBtn').onclick=openPal;
+$('#palOverlay').onclick=e=>{if(e.target.id==='palOverlay')closePal()};
+$('#palInput').oninput=()=>{palSel=0;renderPal()};
+$('#palInput').onkeydown=e=>{if(e.key==='ArrowDown'){palSel=Math.min(palSel+1,palList.length-1);renderPal();e.preventDefault()}else if(e.key==='ArrowUp'){palSel=Math.max(palSel-1,0);renderPal();e.preventDefault()}else if(e.key==='Enter')palGo(palSel);else if(e.key==='Escape')closePal()};
+document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openPal()}if(e.key==='Escape'){closePal();$('#ctxMenu').classList.remove('open')}});
+
+$('#menuBtn').onclick=()=>document.body.classList.toggle('collapsed');
+
+/* ================= Router ================= */
+function route(){
+  const [,view,arg]=(location.hash||'#/overview').split('/');
+  curView=V[view]?view:'overview';
+  $('#main').innerHTML=V[curView](arg);
+  renderNav(curView);renderGenie();
+  window.scrollTo(0,0);
+}
+window.addEventListener('hashchange',route);
+route();
+</script>
+<script>
+/* ================= Arria Pilot — Multi-Agent Orchestrator ================= */
+const GEN={
+ orch:{name:'Arria Pilot',sub:'Plans and coordinates',color:'#393939',icon:'genie',caps:[]},
+ loop:{name:'Stream Arria',sub:'Planning, work items, insights',color:'#8a3ffc',icon:'loopg',caps:['plan','architect','observe']},
+ code:{name:'Code Arria',sub:'Code generation and change',color:'#1192e8',icon:'code',caps:['code','control','build']},
+ test:{name:'Test Arria',sub:'Test generation and execution',color:'#198038',icon:'test',caps:['test']},
+ deploy:{name:'Ship Arria',sub:'Release and deployment',color:'#ff832b',icon:'deploy',caps:['release','deploy']},
+ human:{name:'You',sub:'Human gate',color:'#525252',icon:'home',caps:[]}
+};
+const LANES=['orch','loop','code','test','deploy'];
+const LH=128;
+const gi=(k,sz)=>`<span class="gi" style="background:${GEN[k].color}${sz?`;width:${sz}px;height:${sz}px`:''}">${ic(GEN[k].icon)}</span>`;
+const PLAN=[
+ {g:'loop',cap:'plan',t:'Scope defect DL-4821',d:'Pull logs and incidents, confirm impact, set acceptance criteria'},
+ {g:'code',cap:'code',t:'Propose a fix in checkout-service',d:'Find the slow call path and draft a code change'},
+ {g:'code',cap:'control',t:'Open PR and run the build',d:'PR on checkout-backend, build in Build'},
+ {g:'test',cap:'test',t:'Generate and run tests',d:'Add a timeout regression test, run Checkout regression'},
+ {g:'deploy',cap:'release',t:'Assemble release candidate',d:'Package changes, rate risk, run policy checks'},
+ {g:'human',cap:'release',t:'Approve release to staging',d:'Human gate required by policy set payments-default',locked:true},
+ {g:'deploy',cap:'deploy',t:'Deploy to staging and verify',d:'Deploy v2.14.1-rc1, check error rate and latency'},
+ {g:'loop',cap:'plan',t:'Close the stream',d:'Close the defect, record insights, create follow-ups'}
+];
+const DEFAULT_AUTO=['Auto','Ask me','Auto','Auto','Auto','Manual','Auto','Auto'];
+const EVENTS=[
+ {lane:'orch',log:'Plan approved: 8 steps, 1 human gate. Starting run in Payments Platform / Checkout.'},
+ {lane:'loop',cap:'plan',step:0,log:'Stream Arria scoped DL-4821: p95 payment-confirmation latency 8.2 s since 9 Oct; linked incident INC-2207; acceptance criteria set.',
+  card:{kind:'Work item',title:'DL-4821',ctx:'Acceptance criteria, INC-2207 logs, p95 8.2 s',from:'loop',to:'code'}},
+ {lane:'code',cap:'code',step:1,log:'Code Arria found an unbounded payment-gateway call in checkout-service. Fix: 3 s timeout plus retry with backoff.',
+  card:{kind:'Code diff',title:'Diff #1 · +18 −4',ctx:'Gateway client: 3 s timeout, 2 retries with backoff',from:'code',to:'test'}},
+ {lane:'code',cap:'control',step:2,log:'PR #324 opened on checkout-backend. Build #217 passed.'},
+ {lane:'test',cap:'test',step:3,fail:true,log:'Test Arria ran Checkout regression on build #217: 2 failing (refund after timeout, idempotent retry).',
+  card:{kind:'Test report',title:'412 / 414 passed',ctx:'2 failing: refund after timeout, idempotent retry',from:'test',to:'orch',fail:true}},
+ {lane:'orch',retry:true,log:'Arria Pilot: retries reuse the original idempotency key, so the refund path rejects them. Routing failing traces back to Code Arria. Retry 1 of 3.',
+  card:{kind:'Handoff',title:'Failure context',ctx:'Failing traces + root cause: reused idempotency key',from:'orch',to:'code'}},
+ {lane:'code',cap:'code',log:'Code Arria produced a revised diff: a new idempotency key for each retry attempt. PR #324 updated, build #218 passed.',
+  card:{kind:'Code diff',title:'Diff #2 · +6 −2',ctx:'New idempotency key per retry; PR #324 updated',from:'code',to:'test'}},
+ {lane:'test',cap:'test',pass:true,log:'Test Arria reran on build #218: 414 / 414 passed, including 1 new timeout regression test.',
+  card:{kind:'Test report',title:'414 / 414 passed',ctx:'+1 new timeout regression test',from:'test',to:'deploy'}},
+ {lane:'deploy',cap:'release',step:4,log:'Ship Arria assembled release candidate v2.14.1-rc1. Risk rated Low. Policy checks 4 of 4 passed.',
+  card:{kind:'Release candidate',title:'v2.14.1-rc1',ctx:'Diffs, test report, policy set payments-default',from:'deploy',to:'orch'}},
+ {lane:'orch',gate:true,log:'Waiting for your approval at the release gate.'}
+];
+const ORCH={};
+function orchReset(){Object.assign(ORCH,{goal:'Fix defect DL-4821 (checkout timeout) and release to staging.',env:'staging',auto:[...DEFAULT_AUTO],showReason:true,phase:'idle',ei:0,cards:[],log:[],asked:{},paused:null,timer:null,outcome:null,humanSteps:[],touched:new Set(),activeLane:null,added:[]});window.ORCH_ACTIVE=null;window.ORCH_RUNNING=false}
+orchReset();
+
+/* fictional defect that the pilot works on */
+const DL={dates:Array(9).fill('14 Oct'),release:'v2.14.1-rc1',id:'DL-4821',type:'Defect',title:'Checkout timeout on payment confirmation',stage:0,health:'warn',owner:'AH',pts:3,pr:324,build:218,ver:'2.14.1-rc1',
+ trace:{plan:['Defect DL-4821 logged','p95 payment-confirmation latency 8.2 s · owner ALi H.']}};
+ITEMS.push(DL);
+const DL_DONE_TRACE={
+ plan:['Defect scoped by Stream Arria','INC-2207 linked · acceptance criteria set · orchestrated run'],
+ architect:['Architect skipped by Arria Pilot','No interface change expected in checkout-service'],
+ code:['Code Arria: diff #1, then revised diff #2','Retry 1 of 3 after 2 failing tests'],
+ control:['PR #324 merged into main','Opened and updated by Code Arria'],
+ build:['Build #218 passed','Build #217 passed; its tests failed downstream'],
+ test:['Test Arria: 414 / 414 passed','+1 timeout regression test'],
+ release:['Release v2.14.1-rc1 approved by you','Risk Low · policy checks 4 of 4'],
+ deploy:['v2.14.1-rc1 deployed to staging','Health verified by Ship Arria']
+};
+PAL.push({g:'Capabilities',t:'Arria Pilot',s:'Hand a delivery goal to the Arria agents',h:'#/pilot/home',icon:'genie'});
+GENIE.pilot=['Describe a delivery goal. I plan it, pick the Arria agents, and stop at the gates your policy set defines.',['What can Arria Pilot do on its own?','Which steps need my approval?']];
+
+const ts=i=>{const t=new Date(Date.UTC(2026,9,14,10,42,0)+i*97000);return t.toISOString().slice(11,19)};
+const banner=()=>`<div class="notice gray">Concept prototype — not a committed roadmap</div>`;
+function stepper(cur){
+ const S=[['home','Home'],['plan','Plan review'],['run','Live run'],['fix','Failure & self-correction'],['gate','Approval gate'],['summary','Summary']];
+ const order=S.map(x=>x[0]);
+ let ci=order.indexOf(cur);
+ return `<div class="stepper">${S.map(([k,n],i)=>{let c='';
+  if(k==='fix'){ if(ORCH.phase==='fix')c='fail';else if(ORCH.fixed&&ci>3)c='done fixed';else if(ORCH.fixed)c='done fixed';}
+  else if(i<ci)c='done';else if(i===ci)c='cur';
+  if(cur==='run'&&k==='fix'&&ORCH.phase==='fix')c='fail';
+  return `<div class="s ${c}"><span class="n">${i+1}</span>${n}</div>`}).join('')}</div>`;
+}
+
+V.pilot=(step)=>{
+ step=step||'home';
+ if(step==='run'&&ORCH.phase==='idle')step='home';
+ if(step==='summary'&&!ORCH.outcome)step=ORCH.phase==='idle'?'home':'run';
+ const H={home:oHome,plan:oPlan,run:oRun,gate:oGate,summary:oSummary}[step]||oHome;
+ return H();
+};
+function oHead(sub,actions=''){return crumbs([`<a onclick="go('#/pilot/home')">Arria Pilot</a>`])+banner()+
+ `<div class="ph"><div><h1><span style="color:var(--purple)">${ic('genie','style="width:26px;height:26px"')}</span>Arria Pilot</h1><div class="sub">${sub}</div></div><div class="actions">${actions}</div></div>`}
+
+function oHome(){
+ const runs=[...(ORCH.outcome?[[ORCH.goal,ORCH.outcome==='approved'?'Completed':'Rejected at gate','Today, 11:42','14 min']]:[]),
+  ['Upgrade payment-sdk to 4.2 across checkout services','Completed','Yesterday, 16:20','38 min'],
+  ['Add regression tests for refund webhook','Completed','10 Oct, 11:05','22 min'],
+  ['Release ledger-connector 3.8 to staging','Rejected at gate','9 Oct, 09:41','14 min'],
+  ['Triage flaky tests in soft-decline suite','Completed','7 Oct, 14:12','51 min']];
+ const live=ORCH.phase!=='idle'&&!ORCH.outcome;
+ return oHead('Describe a goal. Arria Pilot plans it and coordinates the agents across every capability in this stream.')+stepper('home')+
+ (live?`<div class="notice ask"><span>A run is in progress: <b>${esc(ORCH.goal)}</b></span><div class="act"><button class="btn sm" onclick="go('#/pilot/run')">Open live run</button></div></div>`:'')+
+ `<div class="card" style="margin-bottom:16px"><h3>What should we deliver?</h3>
+  <textarea class="goal" id="goalIn" aria-label="Delivery goal">${esc(ORCH.goal)}</textarea>
+  <div class="fields">
+   <label>Stream<span class="v">${esc(ctx.name)}</span></label>
+   <label>Team<span class="v">${esc(ctx.team)}</span></label>
+   <label>Environment<span class="v">staging</span></label>
+   <label>Policy set<span class="v">payments-default</span></label>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px"><span class="small muted">Stream and team come from the shell context, so you don't pick them again.</span><button class="btn" style="margin-left:auto;background:var(--purple)" ${live?'disabled':''} onclick="ORCH.goal=$('#goalIn').value.trim()||ORCH.goal;go('#/pilot/plan')">Run</button></div></div>
+ <div class="card" style="margin-bottom:16px"><h3>Arria Agents<span class="r muted">Arria Pilot sits above them and passes context between them</span></h3><div class="grid g4">
+ ${['loop','code','test','deploy'].map(k=>{const G=GEN[k];const act=k==='loop'||(ORCH.activeLane===k);return `<div class="card gcard" style="--acc:${G.color};padding:14px"><div class="top">${gi(k)}<span class="nm">${G.name}</span><span class="tagx ${act?'on':''}" style="margin-left:auto">${act?'Active':'Idle'}</span></div><div class="small muted" style="margin-bottom:10px">${G.sub}</div><div class="small muted">${k==='loop'&&!ORCH.activeLane?'Indexing Sprint 42 insights':'Ready'}</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:10px">${G.caps.map(stChip).join('')}</div></div>`}).join('')}
+ </div></div>
+ <div class="card" style="padding:0"><h3 style="padding:16px 18px 4px">Recent runs</h3>${table(['Goal','Status','Started','Duration'],runs.map(r=>`<tr><td>${esc(r[0])}</td><td><span class="tagx ${r[1]==='Completed'?'green':'red'}">${r[1]}</span></td><td class="muted small">${r[2]}</td><td>${r[3]}</td></tr>`))}</div>`;
+}
+
+function oPlan(){
+ const locked=ORCH.phase!=='idle';
+ return oHead(`Proposed plan for: <b>${esc(ORCH.goal)}</b>`,`<button class="btn ghost" onclick="ORCH.showReason=!ORCH.showReason;route()">${ORCH.showReason?'Hide':'Show'} reasoning</button>`)+stepper('plan')+
+ `<div class="grid" style="grid-template-columns:${ORCH.showReason?'minmax(0,1fr) 320px':'1fr'}">
+  <div><div class="psteps" style="border:1px solid var(--border)">${PLAN.map((p,i)=>`<div class="row"><span class="num">${String(i+1).padStart(2,'0')}</span><span class="gn">${gi(p.g)}${GEN[p.g].name}</span><div><div class="tt">${p.t}</div><div class="dd">${p.d} · ${stChip(p.cap)}</div></div>
+   <div>${p.locked?'<span class="tagx yel">Human gate</span>':`<div class="seg" role="group" aria-label="Autonomy for step ${i+1}">${['Auto','Ask me','Manual'].map(a=>`<button class="${ORCH.auto[i]===a?'on':''}" ${locked?'disabled':''} onclick="ORCH.auto[${i}]='${a}';route()">${a}</button>`).join('')}</div>`}</div></div>`).join('')}</div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn ghost" onclick="go('#/pilot/home')">Back</button><button class="btn" ${locked?'disabled':''} onclick="orchStart()">Approve plan</button></div></div>
+  ${ORCH.showReason?`<div class="card reason" style="align-self:start"><h3>${gi('orch',22)} Why this plan</h3><ul>
+   <li>The defect is in checkout, owned by team ${esc(ctx.team)}, so the run uses this stream's context in every capability.</li>
+   <li>The fix is likely inside checkout-service, so Architect is skipped: no interface change is expected.</li>
+   <li>Code changes default to <b>Ask me</b> because checkout-service handles payments.</li>
+   <li>Policy set payments-default requires human approval before anything leaves dev.</li>
+   <li>If tests fail, Arria Pilot retries up to 3 times, then stops and asks you.</li></ul></div>`:''}
+ </div>`;
+}
+
+/* ---- live run ---- */
+function laneTop(k){return LANES.indexOf(k)*LH+12}
+function cardX(i){return 196+i*186}
+function cardHTML(c,i,pos){const G=GEN[c.from];return `<div class="art ${c.fail?'fail':''}" id="art${i}" style="--acc:${G.color};left:${cardX(i)}px;top:${laneTop(pos)}px"><div class="k">${c.kind}</div><div class="t">${c.title}</div><div class="c">${c.ctx}</div><div class="fr">${GEN[c.from].name} → ${GEN[c.to].name}</div></div>`}
+function laneState(k){
+ if(k==='test'&&ORCH.phase==='fix'&&ORCH.activeLane==='test')return ['red','2 tests failing'];
+ if(ORCH.activeLane===k)return ['active','Working…'];
+ return ['',ORCH.touched.has(k)?'Done':'Waiting'];
+}
+function lanesHTML(){
+ return `<div class="lanes" id="lanes"><div class="lanes-inner">${LANES.map(k=>{const G=GEN[k];const [cls,st]=laneState(k);return `<div class="lane ${k==='orch'?'orch':''} ${cls}" style="--acc:${G.color}"><div class="ll">${gi(k)}<span>${G.name}<span class="sub">${G.sub}</span><span class="stt" style="color:${cls==='red'?'var(--red)':cls?G.color:'var(--subtle)'}">${st}</span></span></div></div>`}).join('')}
+ ${ORCH.cards.map((c,i)=>cardHTML(c,i,c.to)).join('')}</div></div>`;
+}
+function noticeHTML(){
+ if(ORCH.paused){const p=PLAN[ORCH.paused];return `<div class="notice ask">${gi(p.g,22)}<span><b>${GEN[p.g].name} is ready: ${p.t}.</b> You set this step to ${ORCH.auto[ORCH.paused]}.</span><div class="act"><button class="btn sm" onclick="orchResume()">${ORCH.auto[ORCH.paused]==='Manual'?'Mark step done':'Approve and continue'}</button></div></div>`}
+ if(ORCH.phase==='fix')return `<div class="notice err">${gi('test',22)}<span><b>Test Arria: 2 failing tests.</b> Arria Pilot is routing the failure back to Code Arria.</span><div class="act"><span class="tagx red">Retry 1 of 3</span></div></div>`;
+ if(ORCH.phase==='gate')return `<div class="notice ok"><span><b>Self-corrected after retry 1 of 3.</b> Release candidate v2.14.1-rc1 is ready for your approval.</span><div class="act"><button class="btn sm" onclick="go('#/pilot/gate')">Review release</button></div></div>`;
+ if(ORCH.fixed)return `<div class="notice ok"><span><b>Tests pass after retry 1 of 3.</b> Continuing to release.</span></div>`;
+ return `<div class="notice"><span><b>Running.</b> Each agent works inside its capability; the left navigation shows where.</span></div>`;
+}
+function logHTML(){return `<h4>Activity</h4>${ORCH.log.slice().reverse().map(l=>`<div class="e ${l.cls||''}"><span class="ts">${l.ts}</span>${gi(l.lane,20)}<span>${l.text}</span></div>`).join('')}`}
+function oRun(){
+ return oHead(`Live run: <b>${esc(ORCH.goal)}</b>`,`<button class="btn ghost" onclick="go('#/pilot/plan')">View plan</button>`)+
+ `<div id="stepWrap">${stepper(ORCH.phase==='fix'?'fix':'run')}</div><div id="runNotice">${noticeHTML()}</div>
+ <div class="runwrap"><div>${lanesHTML()}<div class="small muted" style="margin-top:8px">Cards show what each agent handed on and the context passed with it. Scroll right for earlier handoffs.</div></div><div class="log" id="runLog">${logHTML()}</div></div>`;
+}
+function refreshRun(newIdx){
+ renderNav(curView);
+ if(curView!=='pilot'||!$('#lanes'))return;
+ $('#stepWrap').innerHTML=stepper(ORCH.phase==='fix'?'fix':'run');
+ $('#runNotice').innerHTML=noticeHTML();
+ $('#runLog').innerHTML=logHTML();
+ const inner=$('#lanes .lanes-inner');
+ inner.querySelectorAll('.lane').forEach(el=>el.remove());
+ inner.insertAdjacentHTML('afterbegin',LANES.map(k=>{const G=GEN[k];const [cls,st]=laneState(k);return `<div class="lane ${k==='orch'?'orch':''} ${cls}" style="--acc:${G.color}"><div class="ll">${gi(k)}<span>${G.name}<span class="sub">${G.sub}</span><span class="stt" style="color:${cls==='red'?'var(--red)':cls?G.color:'var(--subtle)'}">${st}</span></span></div></div>`}).join(''));
+ if(newIdx!=null){
+  const c=ORCH.cards[newIdx];
+  inner.insertAdjacentHTML('beforeend',cardHTML(c,newIdx,c.from));
+  const el=$('#art'+newIdx);el.style.opacity=0;
+  $('#lanes').scrollLeft=Math.max(0,cardX(newIdx)-460);
+  requestAnimationFrame(()=>{el.style.opacity=1;setTimeout(()=>{el.style.top=laneTop(c.to)+'px'},550)});
+ }
+}
+function orchStart(){
+ ORCH.phase='run';ORCH.ei=0;window.ORCH_RUNNING=true;ORCH.started=true;
+ go('#/pilot/run');setTimeout(orchTick,700);
+}
+function orchTick(){
+ if(ORCH.paused||ORCH.ei>=EVENTS.length)return;
+ const ev=EVENTS[ORCH.ei];
+ if(ev.step!=null&&ORCH.auto[ev.step]!=='Auto'&&!ORCH.asked[ev.step]){ORCH.paused=ev.step;ORCH.activeLane=ev.lane;window.ORCH_ACTIVE=ev.cap||null;refreshRun();return}
+ ORCH.activeLane=ev.lane;if(ev.lane!=='orch')ORCH.touched.add(ev.lane);
+ window.ORCH_ACTIVE=ev.cap||null;
+ if(ev.fail)ORCH.phase='fix';
+ if(ev.pass){ORCH.phase='run';ORCH.fixed=true}
+ ORCH.log.push({ts:ts(ORCH.ei),lane:ev.lane,text:ev.log,cls:ev.fail?'err':ev.pass?'ok':''});
+ let ni=null;if(ev.card){ORCH.cards.push(ev.card);ni=ORCH.cards.length-1}
+ if(ev.gate){ORCH.phase='gate';ORCH.activeLane='orch';window.ORCH_ACTIVE='release'}
+ ORCH.ei++;
+ refreshRun(ni);
+ if(!ev.gate)ORCH.timer=setTimeout(orchTick,ev.fail?2600:1700);
+}
+function orchResume(){const s=ORCH.paused;ORCH.asked[s]=true;ORCH.humanSteps.push(s);ORCH.log.push({ts:ts(ORCH.ei),lane:'orch',text:`You approved step ${s+1}: ${PLAN[s].t}.`});ORCH.paused=null;orchTick()}
+
+/* ---- gate ---- */
+function oGate(){
+ if(ORCH.phase!=='gate'&&!ORCH.outcome)return oHead('Approval gate')+stepper('gate')+`<div class="notice"><span>The run hasn't reached the gate yet.</span><div class="act"><button class="btn sm" onclick="go('#/pilot/${ORCH.phase==='idle'?'home':'run'}')">Back to the run</button></div></div>`;
+ const done=!!ORCH.outcome;
+ return oHead('Ship Arria presents the release. You decide.')+stepper('gate')+
+ `<div class="grid g2" style="margin-bottom:16px">
+  <div class="card" style="border-top:3px solid #ff832b"><h3>${gi('deploy',22)} Release summary · v2.14.1-rc1<span class="r">Target: staging</span></h3>
+   <div class="chk"><b style="min-width:110px">Changes</b><span>PR #324 on checkout-backend · 2 files · +24 −6 · ${idl('DL-4821')}</span></div>
+   <div class="chk"><b style="min-width:110px">Tests</b><span>414 / 414 passed on build #218 · +1 new timeout test · 1 retry</span></div>
+   <div class="chk"><b style="min-width:110px">Risk</b><span><span class="tagx green">Low</span> Change is limited to the gateway client in checkout-service, full regression passed, and the target is staging only.</span></div>
+   <div class="chk"><b style="min-width:110px">Rollback</b><span>Previous version v2.14.0 stays deployable in one step</span></div></div>
+  <div class="card"><h3>Policy and compliance checks<span class="r muted">payments-default</span></h3>
+   ${[['No critical vulnerabilities','Security scan on PR #324'],['Card data not written to logs','Log redaction rule'],['Change linked to a work item','DL-4821'],['Inside the staging deploy window','Open until 18:00']].map(c=>`<div class="chk"><span class="ok">✓</span><span>${c[0]}</span><span class="muted small" style="margin-left:auto">${c[1]}</span></div>`).join('')}</div></div>
+ <div style="display:flex;gap:8px;justify-content:flex-end">${done?`<button class="btn" onclick="go('#/pilot/summary')">View summary</button>`:`<button class="btn danger" onclick="orchDecide('rejected')">Reject</button><button class="btn ghost" onclick="toast('Sent back to Code Arria with your note. The gate stays open.')">Request changes</button><button class="btn" onclick="orchDecide('approved')">Approve</button>`}</div>`;
+}
+function orchDecide(o){
+ ORCH.outcome=o;ORCH.phase='done';window.ORCH_RUNNING=false;window.ORCH_ACTIVE=null;ORCH.activeLane=null;
+ if(o==='approved'){
+  DL.stage=7;DL.health='ok';DL.trace=DL_DONE_TRACE;
+  const fu={id:'PAY-172',title:'Timeout budget for remaining gateway calls',stage:0,health:'ok',owner:'AH',pts:3,pr:0,build:0,ver:''};
+  ITEMS.push(fu);
+  FEED.unshift(['plan','Stream Arria created a follow-up from the run','PAY-172','now'],['deploy','Arria Pilot released <b>v2.14.1-rc1</b> to staging','DL-4821','now']);
+  ORCH.added=['PAY-172'];
+  toast('Approved. Ship Arria is releasing v2.14.1-rc1 to staging.');
+ } else toast('Rejected. DL-4821 stays open and Stream Arria is notified.');
+ go('#/pilot/summary');
+}
+
+/* ---- summary ---- */
+function oSummary(){
+ const ok=ORCH.outcome==='approved';
+ const autoN=ORCH.auto.filter(a=>a==='Auto').length, humN=PLAN.length-autoN;
+ const rows=[
+  ['10:42','Plan approved','You','8-step plan, reasoning panel'],
+  ['10:43','Defect scoped','Stream Arria','INC-2207, p95 8.2 s'],
+  ['10:45','Fix approach: timeout and retry'+(ORCH.humanSteps.includes(1)?' (approved by you)':''),'Code Arria','Gateway call trace in checkout-service'],
+  ['10:48','Failure routed back, retry 1 of 3','Arria Pilot','2 failing tests, root cause: reused idempotency key'],
+  ['10:50','Revised diff','Code Arria','Build #218, 414 / 414 tests'],
+  ['10:53','Risk rated Low','Ship Arria','2 files, staging only, full regression passed'],
+  ['10:56',ok?'Release approved':'Release rejected','You','Release summary, policy checks 4 of 4'],
+  ...(ok?[['10:56','Deployed to staging, health verified','Ship Arria','Error rate unchanged, p95 1.1 s'],['10:57','Defect closed, follow-up created','Stream Arria','PAY-172']]:[])
+ ];
+ const who=w=>w==='You'?`<span class="st">You</span>`:`<span style="display:inline-flex;gap:6px;align-items:center">${gi({"Stream Arria":'loop',"Code Arria":'code',"Test Arria":'test',"Ship Arria":'deploy',"Arria Pilot":'orch'}[w],18)}${w}</span>`;
+ return oHead(`Run summary: <b>${esc(ORCH.goal)}</b>`,`<a onclick="orchRestart()" style="align-self:center">Restart demo</a>`)+stepper('summary')+
+ `<div class="grid g4" style="margin-bottom:16px">
+  <div class="card kpi" style="border-top:3px solid ${ok?'var(--green)':'var(--red)'}"><div class="lbl">Outcome</div><div class="val" style="font-size:22px">${ok?'Released to staging':'Rejected at gate'}</div></div>
+  <div class="card kpi"><div class="lbl">Total duration</div><div class="val">14 min</div><div class="small muted">Simulated</div></div>
+  <div class="card kpi"><div class="lbl">Steps automated vs human</div><div class="val">${autoN} / ${humN}</div><div class="small muted">From your autonomy settings</div></div>
+  <div class="card kpi"><div class="lbl">Self-corrections</div><div class="val">1</div><div class="small muted">Retry 1 of 3 used</div></div></div>
+ <div class="card" style="padding:0"><h3 style="padding:16px 18px 4px">Audit trail<span class="r muted">Every decision, who made it, and the evidence</span></h3>
+ ${table(['Time','Decision','Made by','Evidence'],rows.map(r=>`<tr><td class="mono muted">${r[0]}</td><td>${r[1]}</td><td>${who(r[2])}</td><td class="muted small">${r[3]}</td></tr>`))}</div>
+ <div class="loopclose">${gi('loop')}<div><b>${ok?'Feedback sent to Stream Arria: defect closed, follow-up item created.':'Feedback sent to Stream Arria: release rejected, defect stays open.'}</b>
+  <div class="small muted">${ok?`${idl('DL-4821')} closed in Plan · follow-up ${idl('PAY-172')} added to the backlog · the stream closes back into planning.`:`${idl('DL-4821')} stays in Plan with the run attached as evidence.`}</div></div>
+  <div style="margin-left:auto;display:flex;gap:8px"><button class="btn ghost sm" onclick="go('#/trace/DL-4821')">Trace DL-4821</button><button class="btn sm" onclick="go('#/plan')">Open in Plan</button></div></div>`;
+}
+function orchRestart(){
+ clearTimeout(ORCH.timer);
+ for(const id of ORCH.added){const i=ITEMS.findIndex(x=>x.id===id);if(i>=0)ITEMS.splice(i,1)}
+ FEED=FEED.filter(f=>f[3]!=='now');
+ Object.assign(DL,{stage:0,health:'warn',trace:{plan:['Defect DL-4821 logged','p95 payment-confirmation latency 8.2 s · owner ALi H.']}});
+ orchReset();go('#/pilot/home');route();
+}
+route();
+</script>
+</body>
+</html>
